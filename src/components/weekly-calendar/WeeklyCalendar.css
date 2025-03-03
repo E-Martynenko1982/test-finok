@@ -3,17 +3,20 @@
 	flex-direction: column;
 	align-items: center;
 	font-family: Arial, sans-serif;
+	margin: 20px;
 }
 
 .calendar-grid {
 	display: grid;
-	grid-template-columns: 80px repeat(7, 1fr);
+	grid-template-rows: auto repeat(7, 1fr);
 	border: 1px solid #ccc;
+	width: max-content;
 }
 
 .header-row,
-.hour-row {
-	display: contents;
+.day-row {
+	display: grid;
+	grid-template-columns: 80px repeat(24, minmax(25px, 1fr));
 }
 
 .time-label {
@@ -24,16 +27,17 @@
 	font-weight: bold;
 	padding: 5px;
 	border: 1px solid #ccc;
+	font-size: 12px;
 }
 
 .day-label {
 	display: flex;
 	align-items: center;
-	justify-content: center;
+	justify-content: flex-start;
+	gap: 8px;
 	background: #e0e0e0;
 	font-weight: bold;
-	cursor: pointer;
-	padding: 5px;
+	padding: 5px 10px;
 	border: 1px solid #ccc;
 }
 
@@ -42,8 +46,8 @@
 }
 
 .hour-cell {
-	width: 40px;
-	height: 20px;
+	width: 100%;
+	height: 30px;
 	border: 1px solid #ccc;
 	cursor: pointer;
 	background: #f9f9f9;
