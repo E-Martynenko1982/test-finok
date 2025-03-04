@@ -1,52 +1,60 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import "./WeeklyCalendar.css";
+import {
+  mergeIntervals,
+  removeInterval,
+  isDayFullySelected as isDayFullySelectedUtil,
+  isHourSelected as isHourSelectedUtil
+} from "../../utils/intervals";
 
-const HOURS_IN_DAY = 24;
-const WEEK_DAYS = ["mo", "tu", "we", "th", "fr", "sa", "su"];
+const WeeklyCalendar = ({
+  schedule,
+  setSchedule,
+  dragging,
+  setDragging,
+  isSelecting,
+  setIsSelecting,
+  draggingDay,
+  setDraggingDay,
+  HOURS_IN_DAY,
+  WEEK_DAYS,
+}) => {
 
-const initialSchedule = {
-  mo: [{ bt: 240, et: 779 }],
-  tu: [],
-  we: [],
-  th: [{ bt: 240, et: 779 }, { bt: 1140, et: 1319 }],
-  fr: [{ bt: 660, et: 1019 }],
-  sa: [{ bt: 0, et: 1439 }],
-  su: [],
-};
+  const isDayFullySelected = (day) => {
+    return isDayFullySelectedUtil(schedule[day]);
+  };
 
-const WeeklyCalendar = () => {
-  const [schedule, setSchedule] = useState(initialSchedule);
-  const [dragging, setDragging] = useState(false);
-  const [isSelecting, setIsSelecting] = useState(true);
-  const [draggingDay, setDraggingDay] = useState(null);
+  const isHourSelected = (day, hour) => {
+    return isHourSelectedUtil(schedule[day], hour * 60);
+  };
 
-  useEffect(() => {
-    const handleMouseUp = () => setDragging(false);
-    document.addEventListener("mouseup", handleMouseUp);
-    return () => document.removeEventListener("mouseup", handleMouseUp);
-  }, []);
+  const handleDayCheckboxChange = (day, checked) => {
+    setSchedule((prev) => ({
+      ...prev,
+      [day]: checked ? [{ bt: 0, et: 1439 }] : []
+    }));
+  };
 
   const toggleHour = (day, hour, select) => {
     setSchedule((prev) => {
       const newSchedule = { ...prev };
-      const hourStart = hour * 60;
-      const hourEnd = hourStart + 59;
+      const interval = { bt: hour * 60, et: hour * 60 + 59 };
 
       if (select) {
-        newSchedule[day] = mergeIntervals([...newSchedule[day], { bt: hourStart, et: hourEnd }]);
+        newSchedule[day] = mergeIntervals([...newSchedule[day], interval]);
       } else {
-        newSchedule[day] = removeInterval(newSchedule[day], hourStart, hourEnd);
+        newSchedule[day] = removeInterval(newSchedule[day], interval.bt, interval.et);
       }
       return newSchedule;
     });
   };
 
   const handleMouseDown = (day, hour) => {
-    const isHourAlreadySelected = isHourSelected(day, hour);
+    const alreadySelected = isHourSelected(day, hour);
     setDragging(true);
     setDraggingDay(day);
-    setIsSelecting(!isHourAlreadySelected);
-    toggleHour(day, hour, !isHourAlreadySelected);
+    setIsSelecting(!alreadySelected);
+    toggleHour(day, hour, !alreadySelected);
   };
 
   const handleMouseEnter = (day, hour) => {
@@ -55,71 +63,64 @@ const WeeklyCalendar = () => {
     }
   };
 
-  const isHourSelected = (day, hour) => {
-    const hourStart = hour * 60;
-    return schedule[day].some(
-      (interval) => interval.bt <= hourStart && interval.et >= hourStart + 59
-    );
+  const handleClear = () => {
+    setSchedule((prev) => {
+      const cleared = {};
+      Object.keys(prev).forEach((day) => {
+        cleared[day] = [];
+      });
+      return cleared;
+    });
   };
 
-  const mergeIntervals = (intervals) => {
-    if (!intervals.length) return [];
-    intervals.sort((a, b) => a.bt - b.bt);
-    const merged = [intervals[0]];
-
-    for (let i = 1; i < intervals.length; i++) {
-      const last = merged[merged.length - 1];
-      if (last.et + 1 >= intervals[i].bt) {
-        last.et = Math.max(last.et, intervals[i].et);
-      } else {
-        merged.push(intervals[i]);
-      }
-    }
-    return merged;
-  };
-
-  const removeInterval = (intervals, start, end) => {
-    const result = [];
-    for (const interval of intervals) {
-      if (interval.bt >= start && interval.et <= end) continue;
-      if (interval.bt < start && interval.et > end) {
-        result.push({ bt: interval.bt, et: start - 1 });
-        result.push({ bt: end + 1, et: interval.et });
-      } else if (interval.et >= start && interval.bt < start) {
-        result.push({ bt: interval.bt, et: start - 1 });
-      } else if (interval.bt <= end && interval.et > end) {
-        result.push({ bt: end + 1, et: interval.et });
-      } else {
-        result.push(interval);
-      }
-    }
-    return result;
+  const handleSaveChanges = () => {
+    localStorage.setItem("weeklySchedule", JSON.stringify(schedule));
+    alert("Поточний розклад збережено в Local Storage!");
   };
 
   return (
-    <div className="weekly-calendar">
-      <div className="calendar-grid">
-        <div className="header-row">
-          <div className="time-label">Day</div>
-          {[...Array(HOURS_IN_DAY)].map((_, hour) => (
-            <div key={hour} className="time-label">{hour}:00</div>
-          ))}
-        </div>
-        {WEEK_DAYS.map((day) => (
-          <div key={day} className="day-row">
-            <div className="day-label">{day.toUpperCase()}</div>
+    <div className="container">
+      <div className="weekly-calendar">
+        <div className="calendar-grid">
+          <div className="header-row">
+            <div className="time-label">Day</div>
             {[...Array(HOURS_IN_DAY)].map((_, hour) => (
-              <div
-                key={`${day}-${hour}`}
-                className={`hour-cell ${isHourSelected(day, hour) ? "selected" : ""}`}
-                onMouseDown={() => handleMouseDown(day, hour)}
-                onMouseEnter={() => handleMouseEnter(day, hour)}
-              ></div>
+              <div key={hour} className="time-label">
+                {hour}:00
+              </div>
             ))}
           </div>
-        ))}
+
+          {WEEK_DAYS.map((day) => {
+            const dayFullySelected = isDayFullySelected(day);
+            return (
+              <div key={day} className="day-row">
+                <div className="day-label">
+                  <input
+                    type="checkbox"
+                    checked={dayFullySelected}
+                    onChange={(e) => handleDayCheckboxChange(day, e.target.checked)}
+                  />
+                  {day.toUpperCase()}
+                </div>
+                {[...Array(HOURS_IN_DAY)].map((_, hour) => (
+                  <div
+                    key={`${day}-${hour}`}
+                    className={`hour-cell ${isHourSelected(day, hour) ? "selected" : ""}`}
+                    onMouseDown={() => handleMouseDown(day, hour)}
+                    onMouseEnter={() => handleMouseEnter(day, hour)}
+                  />
+                ))}
+              </div>
+            );
+          })}
+        </div>
+        <div className="button-container">
+          <button onClick={handleClear}>Clear</button>
+          <button onClick={handleSaveChanges}>Save changes</button>
+        </div>
       </div>
-      <pre>{JSON.stringify(schedule, null, 2)}</pre>
+      <pre className="fixed-pre">{JSON.stringify(schedule, null, 2)}</pre>
     </div>
   );
 };
