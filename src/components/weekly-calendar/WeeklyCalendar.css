@@ -1,7 +1,7 @@
 .fixed-pre {
   position: fixed;
   top: 100px;
-  right: 40%;
+  right: 100px;
   background: #fff;
   padding: 10px;
   border: 1px solid #ccc;
